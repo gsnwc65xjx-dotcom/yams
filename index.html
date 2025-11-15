@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yams Score Calculator / Calculadora de Puntos Yams</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2em;
+        }
+
+        .lang-switch {
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .lang-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .lang-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .players {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .player-input {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .add-player-btn, .reset-btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .add-player-btn:hover, .reset-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .reset-btn {
+            background: #e74c3c;
+        }
+
+        .reset-btn:hover {
+            background: #c0392b;
+        }
+
+        .scorecard {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+
+        .category-name {
+            text-align: left;
+            font-weight: 600;
+            background: #f8f9fa;
+        }
+
+        .section-header {
+            background: #764ba2 !important;
+            color: white;
+            font-weight: bold;
+        }
+
+        .total-row {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .final-total {
+            background: #667eea !important;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1em;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .bonus-indicator {
+            font-size: 0.8em;
+            color: #27ae60;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            input[type="number"] {
+                width: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="title">Calculateur Yams</h1>
+            <div class="lang-switch">
+                <button class="lang-btn active" onclick="setLanguage('fr')">Français</button>
+                <button class="lang-btn" onclick="setLanguage('es')">Español</button>
+            </div>
+        </div>
+
+        <div class="players">
+            <input type="text" class="player-input" id="player1" placeholder="Joueur 1" value="Joueur 1">
+            <input type="text" class="player-input" id="player2" placeholder="Joueur 2" value="Joueur 2">
+            <button class="add-player-btn" onclick="addPlayer()" id="addPlayerBtn">+ Joueur</button>
+            <button class="reset-btn" onclick="resetGame()" id="resetBtn">Réinitialiser</button>
+        </div>
+
+        <div class="scorecard">
+            <table id="scoreTable">
+                <!-- Généré dynamiquement -->
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let lang = 'fr';
+        let players = ['Joueur 1', 'Joueur 2'];
+        
+        const translations = {
+            fr: {
+                title: 'Calculateur Yams',
+                player: 'Joueur',
+                addPlayer: '+ Joueur',
+                reset: 'Réinitialiser',
+                upperSection: 'SECTION SUPÉRIEURE',
+                ones: 'As (1)',
+                twos: 'Deux (2)',
+                threes: 'Trois (3)',
+                fours: 'Quatre (4)',
+                fives: 'Cinq (5)',
+                sixes: 'Six (6)',
+                subtotal: 'Sous-total',
+                bonus: 'Bonus (si ≥ 63)',
+                upperTotal: 'Total Supérieur',
+                lowerSection: 'SECTION INFÉRIEURE',
+                threeKind: 'Brelan',
+                fourKind: 'Carré',
+                fullHouse: 'Full (25 pts)',
+                smallStraight: 'Petite Suite (30 pts)',
+                largeStraight: 'Grande Suite (40 pts)',
+                yams: 'YAMS (50 pts)',
+                chance: 'Chance',
+                lowerTotal: 'Total Inférieur',
+                grandTotal: 'TOTAL GÉNÉRAL'
+            },
+            es: {
+                title: 'Calculadora Yams',
+                player: 'Jugador',
+                addPlayer: '+ Jugador',
+                reset: 'Reiniciar',
+                upperSection: 'SECCIÓN SUPERIOR',
+                ones: 'Unos (1)',
+                twos: 'Doses (2)',
+                threes: 'Treses (3)',
+                fours: 'Cuatros (4)',
+                fives: 'Cincos (5)',
+                sixes: 'Seises (6)',
+                subtotal: 'Subtotal',
+                bonus: 'Bonificación (si ≥ 63)',
+                upperTotal: 'Total Superior',
+                lowerSection: 'SECCIÓN INFERIOR',
+                threeKind: 'Trío',
+                fourKind: 'Póker',
+                fullHouse: 'Full (25 pts)',
+                smallStraight: 'Escalera Pequeña (30 pts)',
+                largeStraight: 'Escalera Grande (40 pts)',
+                yams: 'YAMS (50 pts)',
+                chance: 'Suerte',
+                lowerTotal: 'Total Inferior',
+                grandTotal: 'TOTAL GENERAL'
+            }
+        };
+
+        function setLanguage(newLang) {
+            lang = newLang;
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateUI();
+        }
+
+        function updateUI() {
+            const t = translations[lang];
+            document.getElementById('title').textContent = t.title;
+            document.getElementById('addPlayerBtn').textContent = t.addPlayer;
+            document.getElementById('resetBtn').textContent = t.reset;
+            
+            // Mettre à jour les placeholders
+            document.querySelectorAll('.player-input').forEach((input, i) => {
+                if (!input.value || input.value === translations.fr.player + ' ' + (i+1) || input.value === translations.es.player + ' ' + (i+1)) {
+                    input.value = t.player + ' ' + (i+1);
+                    players[i] = t.player + ' ' + (i+1);
+                }
+                input.placeholder = t.player + ' ' + (i+1);
+            });
+            
+            generateTable();
+        }
+
+        function addPlayer() {
+            const playerNum = players.length + 1;
+            const t = translations[lang];
+            const newPlayer = t.player + ' ' + playerNum;
+            players.push(newPlayer);
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'player-input';
+            input.id = 'player' + playerNum;
+            input.placeholder = newPlayer;
+            input.value = newPlayer;
+            input.onchange = (e) => updatePlayerName(playerNum - 1, e.target.value);
+            
+            const container = document.querySelector('.players');
+            container.insertBefore(input, document.getElementById('addPlayerBtn'));
+            generateTable();
+        }
+
+        function updatePlayerName(index, name) {
+            players[index] = name || translations[lang].player + ' ' + (index + 1);
+            generateTable();
+        }
+
+        function generateTable() {
+            const t = translations[lang];
+            const table = document.getElementById('scoreTable');
+            
+            let html = '<thead><tr><th>' + t.upperSection + '</th>';
+            players.forEach(p => html += '<th>' + p + '</th>');
+            html += '</tr></thead><tbody>';
+            
+            // Section supérieure
+            const upperCategories = [
+                {id: 'ones', name: t.ones},
+                {id: 'twos', name: t.twos},
+                {id: 'threes', name: t.threes},
+                {id: 'fours', name: t.fours},
+                {id: 'fives', name: t.fives},
+                {id: 'sixes', name: t.sixes}
+            ];
+            
+            upperCategories.forEach(cat => {
+                html += '<tr><td class="category-name">' + cat.name + '</td>';
+                players.forEach((p, i) => {
+                    html += '<td><input type="number" min="0" id="' + cat.id + '_' + i + '" onchange="calculate()"></td>';
+                });
+                html += '</tr>';
+            });
+            
+            // Sous-total et bonus
+            html += '<tr class="total-row"><td class="category-name">' + t.subtotal + '</td>';
+            players.forEach((p, i) => html += '<td id="subtotal_' + i + '">0</td>');
+            html += '</tr>';
+            
+            html += '<tr class="total-row"><td class="category-name">' + t.bonus + '</td>';
+            players.forEach((p, i) => html += '<td id="bonus_' + i + '">0</td>');
+            html += '</tr>';
+            
+            html += '<tr class="total-row"><td class="category-name">' + t.upperTotal + '</td>';
+            players.forEach((p, i) => html += '<td id="uppertotal_' + i + '">0</td>');
+            html += '</tr>';
+            
+            // Section inférieure
+            html += '<tr><th class="section-header">' + t.lowerSection + '</th>';
+            players.forEach(() => html += '<th class="section-header"></th>');
+            html += '</tr>';
+            
+            const lowerCategories = [
+                {id: 'three', name: t.threeKind},
+                {id: 'four', name: t.fourKind},
+                {id: 'full', name: t.fullHouse},
+                {id: 'small', name: t.smallStraight},
+                {id: 'large', name: t.largeStraight},
+                {id: 'yams', name: t.yams},
+                {id: 'chance', name: t.chance}
+            ];
+            
+            lowerCategories.forEach(cat => {
+                html += '<tr><td class="category-name">' + cat.name + '</td>';
+                players.forEach((p, i) => {
+                    html += '<td><input type="number" min="0" id="' + cat.id + '_' + i + '" onchange="calculate()"></td>';
+                });
+                html += '</tr>';
+            });
+            
+            html += '<tr class="total-row"><td class="category-name">' + t.lowerTotal + '</td>';
+            players.forEach((p, i) => html += '<td id="lowertotal_' + i + '">0</td>');
+            html += '</tr>';
+            
+            html += '<tr class="final-total"><td class="category-name">' + t.grandTotal + '</td>';
+            players.forEach((p, i) => html += '<td id="grandtotal_' + i + '">0</td>');
+            html += '</tr>';
+            
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        function calculate() {
+            players.forEach((p, i) => {
+                // Section supérieure
+                let subtotal = 0;
+                ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes'].forEach(cat => {
+                    const val = parseInt(document.getElementById(cat + '_' + i)?.value) || 0;
+                    subtotal += val;
+                });
+                
+                document.getElementById('subtotal_' + i).textContent = subtotal;
+                
+                // Bonus
+                const bonus = subtotal >= 63 ? 35 : 0;
+                document.getElementById('bonus_' + i).textContent = bonus;
+                
+                const upperTotal = subtotal + bonus;
+                document.getElementById('uppertotal_' + i).textContent = upperTotal;
+                
+                // Section inférieure
+                let lowerTotal = 0;
+                ['three', 'four', 'full', 'small', 'large', 'yams', 'chance'].forEach(cat => {
+                    const val = parseInt(document.getElementById(cat + '_' + i)?.value) || 0;
+                    lowerTotal += val;
+                });
+                
+                document.getElementById('lowertotal_' + i).textContent = lowerTotal;
+                
+                // Total général
+                const grandTotal = upperTotal + lowerTotal;
+                document.getElementById('grandtotal_' + i).textContent = grandTotal;
+            });
+        }
+
+        function resetGame() {
+            if (confirm(lang === 'fr' ? 'Êtes-vous sûr de vouloir réinitialiser ?' : '¿Está seguro de que desea reiniciar?')) {
+                document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+                calculate();
+            }
+        }
+
+        // Initialisation
+        document.querySelectorAll('.player-input').forEach((input, i) => {
+            input.onchange = (e) => updatePlayerName(i, e.target.value);
+        });
+        
+        generateTable();
+    </script>
+</body>
+</html>
