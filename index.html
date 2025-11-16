@@ -25,7 +25,7 @@
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
             padding: 30px;
         }
@@ -68,6 +68,58 @@
         .lang-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .game-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .game-number {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .game-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-new-game {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-new-game:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-history {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-history:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
         }
 
         .players {
@@ -171,9 +223,84 @@
             border-color: #667eea;
         }
 
-        .bonus-indicator {
-            font-size: 0.8em;
-            color: #27ae60;
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #667eea;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .history-table {
+            margin-top: 20px;
+        }
+
+        .cumulative-total {
+            background: #27ae60 !important;
+            color: white;
+            font-size: 1.3em;
+        }
+
+        .game-separator {
+            background: #f39c12 !important;
+            color: white;
         }
 
         @media (max-width: 600px) {
@@ -188,6 +315,14 @@
             input[type="number"] {
                 width: 60px;
             }
+
+            .game-info {
+                text-align: center;
+            }
+
+            .game-number {
+                font-size: 1.2em;
+            }
         }
     </style>
 </head>
@@ -201,11 +336,19 @@
             </div>
         </div>
 
+        <div class="game-info">
+            <div class="game-number" id="gameNumber">Partie 1</div>
+            <div class="game-actions">
+                <button class="btn btn-history" onclick="showHistory()" id="historyBtn">📊 Historique</button>
+                <button class="btn btn-new-game" onclick="startNewGame()" id="newGameBtn">🎲 Nouvelle Partie</button>
+            </div>
+        </div>
+
         <div class="players">
             <input type="text" class="player-input" id="player1" placeholder="Joueur 1" value="Joueur 1">
             <input type="text" class="player-input" id="player2" placeholder="Joueur 2" value="Joueur 2">
             <button class="add-player-btn" onclick="addPlayer()" id="addPlayerBtn">+ Joueur</button>
-            <button class="reset-btn" onclick="resetGame()" id="resetBtn">Réinitialiser</button>
+            <button class="reset-btn" onclick="resetCurrentGame()" id="resetBtn">Réinitialiser</button>
         </div>
 
         <div class="scorecard">
@@ -215,9 +358,23 @@
         </div>
     </div>
 
+    <!-- Modal Historique -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="historyTitle">📊 Historique des Parties</h2>
+                <span class="close" onclick="closeHistory()">&times;</span>
+            </div>
+            <div id="historyContent"></div>
+            <button class="btn reset-btn" onclick="resetAllGames()" id="resetAllBtn" style="margin-top: 20px;">Réinitialiser tout l'historique</button>
+        </div>
+    </div>
+
     <script>
         let lang = 'fr';
         let players = ['Joueur 1', 'Joueur 2'];
+        let currentGame = 1;
+        let gamesHistory = {};
         
         const translations = {
             fr: {
@@ -225,6 +382,15 @@
                 player: 'Joueur',
                 addPlayer: '+ Joueur',
                 reset: 'Réinitialiser',
+                game: 'Partie',
+                newGame: '🎲 Nouvelle Partie',
+                history: '📊 Historique',
+                historyTitle: '📊 Historique des Parties',
+                resetAll: 'Réinitialiser tout l\'historique',
+                cumulativeTotal: 'TOTAL CUMULÉ',
+                confirmNewGame: 'Voulez-vous sauvegarder la partie actuelle et commencer une nouvelle partie ?',
+                confirmReset: 'Êtes-vous sûr de vouloir réinitialiser la partie actuelle ?',
+                confirmResetAll: 'Êtes-vous sûr de vouloir supprimer tout l\'historique ?',
                 upperSection: 'SECTION SUPÉRIEURE',
                 ones: 'As (1)',
                 twos: 'Deux (2)',
@@ -251,6 +417,15 @@
                 player: 'Jugador',
                 addPlayer: '+ Jugador',
                 reset: 'Reiniciar',
+                game: 'Partida',
+                newGame: '🎲 Nueva Partida',
+                history: '📊 Historial',
+                historyTitle: '📊 Historial de Partidas',
+                resetAll: 'Reiniciar todo el historial',
+                cumulativeTotal: 'TOTAL ACUMULADO',
+                confirmNewGame: '¿Desea guardar la partida actual y comenzar una nueva?',
+                confirmReset: '¿Está seguro de que desea reiniciar la partida actual?',
+                confirmResetAll: '¿Está seguro de que desea eliminar todo el historial?',
                 upperSection: 'SECCIÓN SUPERIOR',
                 ones: 'Unos (1)',
                 twos: 'Doses (2)',
@@ -286,8 +461,12 @@
             document.getElementById('title').textContent = t.title;
             document.getElementById('addPlayerBtn').textContent = t.addPlayer;
             document.getElementById('resetBtn').textContent = t.reset;
+            document.getElementById('gameNumber').textContent = t.game + ' ' + currentGame;
+            document.getElementById('newGameBtn').textContent = t.newGame;
+            document.getElementById('historyBtn').textContent = t.history;
+            document.getElementById('historyTitle').textContent = t.historyTitle;
+            document.getElementById('resetAllBtn').textContent = t.resetAll;
             
-            // Mettre à jour les placeholders
             document.querySelectorAll('.player-input').forEach((input, i) => {
                 if (!input.value || input.value === translations.fr.player + ' ' + (i+1) || input.value === translations.es.player + ' ' + (i+1)) {
                     input.value = t.player + ' ' + (i+1);
@@ -331,7 +510,6 @@
             players.forEach(p => html += '<th>' + p + '</th>');
             html += '</tr></thead><tbody>';
             
-            // Section supérieure
             const upperCategories = [
                 {id: 'ones', name: t.ones},
                 {id: 'twos', name: t.twos},
@@ -349,7 +527,6 @@
                 html += '</tr>';
             });
             
-            // Sous-total et bonus
             html += '<tr class="total-row"><td class="category-name">' + t.subtotal + '</td>';
             players.forEach((p, i) => html += '<td id="subtotal_' + i + '">0</td>');
             html += '</tr>';
@@ -362,7 +539,6 @@
             players.forEach((p, i) => html += '<td id="uppertotal_' + i + '">0</td>');
             html += '</tr>';
             
-            // Section inférieure
             html += '<tr><th class="section-header">' + t.lowerSection + '</th>';
             players.forEach(() => html += '<th class="section-header"></th>');
             html += '</tr>';
@@ -395,11 +571,12 @@
             
             html += '</tbody>';
             table.innerHTML = html;
+            
+            loadCurrentGame();
         }
 
         function calculate() {
             players.forEach((p, i) => {
-                // Section supérieure
                 let subtotal = 0;
                 ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes'].forEach(cat => {
                     const val = parseInt(document.getElementById(cat + '_' + i)?.value) || 0;
@@ -408,14 +585,12 @@
                 
                 document.getElementById('subtotal_' + i).textContent = subtotal;
                 
-                // Bonus
                 const bonus = subtotal >= 63 ? 35 : 0;
                 document.getElementById('bonus_' + i).textContent = bonus;
                 
                 const upperTotal = subtotal + bonus;
                 document.getElementById('uppertotal_' + i).textContent = upperTotal;
                 
-                // Section inférieure
                 let lowerTotal = 0;
                 ['three', 'four', 'full', 'small', 'large', 'yams', 'chance'].forEach(cat => {
                     const val = parseInt(document.getElementById(cat + '_' + i)?.value) || 0;
@@ -424,20 +599,122 @@
                 
                 document.getElementById('lowertotal_' + i).textContent = lowerTotal;
                 
-                // Total général
                 const grandTotal = upperTotal + lowerTotal;
                 document.getElementById('grandtotal_' + i).textContent = grandTotal;
             });
+            
+            saveCurrentGame();
         }
 
-        function resetGame() {
-            if (confirm(lang === 'fr' ? 'Êtes-vous sûr de vouloir réinitialiser ?' : '¿Está seguro de que desea reiniciar?')) {
+        function saveCurrentGame() {
+            const gameData = {};
+            players.forEach((p, i) => {
+                gameData[p] = {
+                    scores: {},
+                    total: parseInt(document.getElementById('grandtotal_' + i)?.textContent) || 0
+                };
+                
+                ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes', 'three', 'four', 'full', 'small', 'large', 'yams', 'chance'].forEach(cat => {
+                    const val = document.getElementById(cat + '_' + i)?.value;
+                    if (val) gameData[p].scores[cat] = val;
+                });
+            });
+            
+            gamesHistory[currentGame] = gameData;
+        }
+
+        function loadCurrentGame() {
+            if (gamesHistory[currentGame]) {
+                const gameData = gamesHistory[currentGame];
+                players.forEach((p, i) => {
+                    if (gameData[p]) {
+                        Object.keys(gameData[p].scores).forEach(cat => {
+                            const input = document.getElementById(cat + '_' + i);
+                            if (input) input.value = gameData[p].scores[cat];
+                        });
+                    }
+                });
+                calculate();
+            }
+        }
+
+        function startNewGame() {
+            const t = translations[lang];
+            saveCurrentGame();
+            currentGame++;
+            document.getElementById('gameNumber').textContent = t.game + ' ' + currentGame;
+            document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+            calculate();
+        }
+
+        function resetCurrentGame() {
+            const t = translations[lang];
+            if (confirm(t.confirmReset)) {
                 document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
                 calculate();
             }
         }
 
-        // Initialisation
+        function showHistory() {
+            const t = translations[lang];
+            const modal = document.getElementById('historyModal');
+            const content = document.getElementById('historyContent');
+            
+            if (Object.keys(gamesHistory).length === 0) {
+                content.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Aucune partie sauvegardée</p>';
+            } else {
+                let html = '<table class="history-table"><thead><tr><th>' + t.game + '</th>';
+                players.forEach(p => html += '<th>' + p + '</th>');
+                html += '</tr></thead><tbody>';
+                
+                const cumulativeTotals = {};
+                players.forEach(p => cumulativeTotals[p] = 0);
+                
+                Object.keys(gamesHistory).sort((a, b) => parseInt(a) - parseInt(b)).forEach(gameNum => {
+                    const gameData = gamesHistory[gameNum];
+                    html += '<tr class="game-separator"><td>' + t.game + ' ' + gameNum + '</td>';
+                    players.forEach(p => {
+                        const score = gameData[p]?.total || 0;
+                        cumulativeTotals[p] += score;
+                        html += '<td>' + score + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                
+                html += '<tr class="cumulative-total"><td>' + t.cumulativeTotal + '</td>';
+                players.forEach(p => html += '<td>' + cumulativeTotals[p] + '</td>');
+                html += '</tr>';
+                
+                html += '</tbody></table>';
+                content.innerHTML = html;
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        function closeHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        function resetAllGames() {
+            const t = translations[lang];
+            if (confirm(t.confirmResetAll)) {
+                gamesHistory = {};
+                currentGame = 1;
+                document.getElementById('gameNumber').textContent = t.game + ' ' + currentGame;
+                document.querySelectorAll('input[type="number"]').forEach(input => input.value = '');
+                calculate();
+                closeHistory();
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('historyModal');
+            if (event.target == modal) {
+                closeHistory();
+            }
+        }
+
         document.querySelectorAll('.player-input').forEach((input, i) => {
             input.onchange = (e) => updatePlayerName(i, e.target.value);
         });
